@@ -547,12 +547,12 @@ def plan_engine(engine, voice, probe_timeout):
     """Return (engine, resolved_voice, note)."""
     voice = voice or "male"
     if engine == "minimax":
+        # no probe: cached clips can be reused offline; API/network errors surface per segment
         if voice in ("male", "female"):
             voice = MINIMAX_DEFAULT[voice]
-        ok, reason, secs = minimax_probe(voice, max(probe_timeout, 8.0))
-        if not ok:
-            raise SystemExit(f"[tts] minimax unavailable: {reason}")
-        return "minimax", voice, reason
+        if not os.environ.get("MINIMAX_API_KEY", "").strip():
+            print("[tts] note: MINIMAX_API_KEY is not set (fine if every segment is cached)", file=sys.stderr)
+        return "minimax", voice, "forced"
     if engine == "edge":
         if voice in ("male", "female"):
             voice = EDGE_DEFAULT[voice]
