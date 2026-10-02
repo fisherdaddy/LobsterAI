@@ -1,0 +1,31 @@
+{
+  "name": "html-video-render",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Frame-accurate HTML -> MP4 renderer (Playwright + ffmpeg)",
+  "scripts": {
+    "setup-assets": "node scripts/setup-assets.mjs",
+    "build-gap-fonts": "python3 scripts/build-cjk-gap-fonts.py",
+    "demo": "node render.mjs --page demo/index.html --out demo/demo.mp4",
+    "demo:draft": "node render.mjs --page demo/index.html --out demo/demo-draft.mp4 --scale 0.5",
+    "demo:stills": "node render.mjs --page demo/index.html --frames 0.5,3,5.5 --out-dir demo/stills",
+    "test:fonts": "node tests/check-fonts.mjs",
+    "test:webgl": "node tests/check-webgl.mjs",
+    "test:frames": "node render.mjs --page tests/frame-index.html --out tmp/fi.mp4 --workers 4 && node tests/verify-frames.mjs tmp/fi.mp4 --count 120",
+    "bench": "node tests/bench.mjs"
+  },
+  "devDependencies": {
+    "@callmebill/lxgw-wenkai-web": "^1.522.0",
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/noto-sans-sc": "^5.3.0",
+    "@fontsource-variable/noto-serif-sc": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
+    "d3": "^7.9.0",
+    "gsap": "^3.15.0",
+    "roughjs": "^4.6.6",
+    "three": "^0.186.1"
+  }
+}
