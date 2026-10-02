@@ -258,7 +258,7 @@
     css(eqn, { top: `${Y0 + 7 * K + 8}px` });
     player.append(eqn);
     // TTS cards + waveform (outside player)
-    const card1 = h('div', { class: 'tts-card', html: '<div class="ic"><svg width="44" height="44" viewBox="0 0 44 44"><circle cx="14" cy="22" r="9" fill="none" stroke="#8c96a2" stroke-width="4"/><path d="M23 22 H40 M33 22 V30 M39 22 V28" stroke="#8c96a2" stroke-width="4" stroke-linecap="round"/></svg></div><div class="h">付费语音服务</div><div class="s">比如 ElevenLabs，效果好，需要 API 密钥</div>' });
+    const card1 = h('div', { class: 'tts-card', html: '<div class="ic"><svg width="44" height="44" viewBox="0 0 44 44"><circle cx="14" cy="22" r="9" fill="none" stroke="#8c96a2" stroke-width="4"/><path d="M23 22 H40 M33 22 V30 M39 22 V28" stroke="#8c96a2" stroke-width="4" stroke-linecap="round"/></svg></div><div class="h">付费语音服务</div><div class="s">比如 ElevenLabs、MiniMax，效果好，需要 API 密钥</div>' });
     const card2 = h('div', { class: 'tts-card', html: '<div class="ic"><svg width="48" height="44" viewBox="0 0 48 44"><rect x="8" y="6" width="32" height="22" rx="3" fill="none" stroke="#83c167" stroke-width="4"/><path d="M3 34 H45" stroke="#83c167" stroke-width="5" stroke-linecap="round"/></svg></div><div class="h">免费 · 本地运行</div><div class="s">让大模型帮你找开源替代方案</div>' });
     css(card1, { left: '1180px', top: '170px' }); css(card2, { left: '1180px', top: '420px' });
     root.append(card1, card2);
@@ -266,7 +266,7 @@
     root.append(waveSvg);
     const NB = 56, WX0 = 1180, WX1 = 1700, WY = 770;
     const bars = Array.from({ length: NB }, (_, i) => sv('rect', { x: WX0 + i * ((WX1 - WX0) / NB), width: ((WX1 - WX0) / NB) * 0.58, rx: 3, fill: '#f0ac5f' }, waveSvg));
-    const engine = TL.engine === 'edge' ? 'Edge TTS · 免费' : '免费语音合成 · 本地生成';
+    const engine = window.L.TTS.badge;
     const wl = h('div', { class: 'wave-lbl' }, '↑ 你正在听的声音');
     const wb = h('div', { class: 'wave-lbl', style: 'font-family:var(--sans);font-size:24px;color:#83c167' }, engine);
     css(wl, { left: '1180px', top: '840px' }); css(wb, { left: '1180px', top: '676px' });
@@ -334,7 +334,9 @@
       // TTS cards + waveform
       fadeUp(card1, t, tCard1, 0.55, 30, tLight + 0.1, 0.4);
       fadeUp(card2, t, tCard2, 0.55, 30, tLight + 0.1, 0.4);
-      card2.className = t > tCard2 + 0.3 ? 'tts-card hot' : 'tts-card';
+      // highlight the option this very narration was made with
+      if (window.L.TTS.paid) card1.className = t > tWl ? 'tts-card hot' : 'tts-card';
+      else card2.className = t > tCard2 + 0.3 ? 'tts-card hot' : 'tts-card';
       const wa = Math.min(ep(t, tWave, 0.5), 1 - prog(t, tLight, tLight + 0.4));
       bars.forEach((b, i) => {
         const v = env(t - (NB - 1 - i) * 0.035);

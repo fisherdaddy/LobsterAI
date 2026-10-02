@@ -167,11 +167,24 @@
     return Math.min(fi ? prog(t, sc.start - fi / 2, sc.start + fi / 2) : 1, fo ? 1 - prog(t, sc.end - fo / 2, sc.end + fo / 2) : 1);
   }
 
+  // which voice engine made the narration (set by build_audio.py) -> on-screen wording
+  const VOICE_NAMES = { 'male-qn-jingying': '精英青年音色', 'male-qn-qingse': '青涩青年音色', 'female-chengshu': '成熟女性音色' };
+  const TTS = (() => {
+    const voice = TL.voice || '';
+    const vname = VOICE_NAMES[voice] || voice;
+    if (TL.engine === 'minimax') {
+      return { paid: true, badge: `MiniMax 语音合成 · ${vname}`, card: 'AI 语音配音',
+        detail: ['MiniMax', TL.tts_model, vname].filter(Boolean).join(' · ') };
+    }
+    if (TL.engine === 'edge') return { paid: false, badge: 'Edge TTS · 免费', card: '免费语音配音', detail: `Edge TTS · ${voice}` };
+    return { paid: false, badge: '免费语音合成 · 本地生成', card: '免费语音配音', detail: 'Kokoro · 开源模型 · 本地合成' };
+  })();
+
   // mark elements whose left/top is their centre (or bottom-centre)
   const centered = (el, pre = 'translate(-50%,-50%)') => { el.__pre = pre; return el; };
 
   window.L = {
-    centered,
+    centered, TTS,
     TL, clamp, lerp, prog, ease, ep, win, hash, kf, SEG, seg, S, E, W, WE, SC, env, CUES, cue,
     $, $$, h, sv, css, attr, show, fadeUp, pop, typer, prepDraw, draw, drawSeq, roughSvg, scenes, scene, sceneAlpha, f3,
   };

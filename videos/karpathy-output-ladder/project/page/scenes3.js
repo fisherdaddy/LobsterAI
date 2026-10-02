@@ -1,5 +1,6 @@
 /* Scenes: why (discardable software), bottleneck (comprehension), outro (+ end card). */
 (function () {
+  const L = window.L;
   const { clamp, lerp, prog, ease, ep, win, kf, hash, S, E, W, WE, SC, TL, env, cue, h, sv, css, attr, show, fadeUp, pop, typer,
     prepDraw, draw, scene } = window.L;
   const f2 = (x) => (Math.round(x * 1000) / 1000).toString();
@@ -241,11 +242,11 @@
     const m1 = mk('1', '大模型写脚本', pre('<span class="c">// script.json</span>\n{\n  <span class="k">"id"</span>: <span class="s">"s18"</span>,\n  <span class="k">"text"</span>: <span class="s">"你看：四个一样的</span>\n<span class="s">   三角形，在大正方形</span>\n<span class="s">   里换个位置……"</span>\n}'));
     const m2 = mk('2', '用代码画动画', pre('<span class="c">// 每一帧都是 t 的函数</span>\n<span class="k">renderFrame</span> = (t) => {\n  const p = ease(t - W(<span class="s">"换个位置"</span>));\n  triangles.<span class="k">move</span>(p);\n  subtitle.<span class="k">show</span>(t);\n};\n<span class="c">// Chromium 逐帧截图 → MP4</span>'));
     const waveSvg = sv('svg', { width: 406, height: 200 });
-    const m3 = mk('3', '免费语音配音', waveSvg);
+    const m3 = mk('3', L.TTS.card, waveSvg);
     const NB = 34;
     const wbars = Array.from({ length: NB }, (_, i) => sv('rect', { x: i * 12, width: 7, rx: 3, fill: '#d97757' }, waveSvg));
     const eng = sv('text', { x: 0, y: 190, 'font-size': 22, fill: '#968b7c', 'font-family': 'Noto Sans SC' }, waveSvg);
-    eng.textContent = TL.engine === 'edge' ? 'Edge TTS · 免费' : 'Kokoro · 开源模型 · 本地合成';
+    eng.textContent = L.TTS.detail;
     css(m1, { left: '150px', top: '300px' }); css(m2, { left: '725px', top: '300px' }); css(m3, { left: '1300px', top: '300px' });
     const stairWrap = h('div', { class: 'abs', style: 'inset:0' });
     root.append(stairWrap);
@@ -260,7 +261,7 @@
     const tTxt = W('s30', '一段文字') - 0.2, tStrike = WE('s30', '一段文字') - 0.05;
     const tS1 = W('s31', '用网页') - 0.1, tS2 = W('s31', '给我做个视频') - 0.1;
     const tOut1 = S('s32') - 0.1, tHow = S('s32') + 0.25;
-    const tM1 = W('s33', '大模型') - 0.15, tM2 = W('s33', '用代码') - 0.1, tM3 = W('s33', '免费') - 0.1;
+    const tM1 = W('s33', '大模型') - 0.15, tM2 = W('s33', '用代码') - 0.1, tM3 = W('s33', '再用') - 0.1;
     const tOut2 = E('s33') + 0.25;
     const tSt = E('s33') + 0.45, tHop = W('s34', '最上面') - 0.25;
     const tEnd = E('s34') + 0.55;

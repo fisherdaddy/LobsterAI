@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Narration build: script.json -> TTS clips -> char-level alignment -> timeline.js + narration.wav.
 
-Usage: python3 build_audio.py [--engine auto|edge|sherpa] [--voice male] [--speed 1.0] [--no-align]
+Usage: python3 build_audio.py [--engine auto|minimax|edge|sherpa] [--voice ID] [--speed 1.0] [--no-align]
+       (defaults come from script.json; MiniMax needs MINIMAX_API_KEY in the environment)
 
 Outputs (relative to this directory):
   build/tts/<id>.wav + manifest.json   per-segment clips (cached by tts.py)
@@ -147,18 +148,22 @@ def to16k(x, sr):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--engine", default="auto")
-    ap.add_argument("--voice", default=None)
+    ap.add_argument("--engine", default=None, help="auto|minimax|edge|sherpa (default: script.json \"engine\")")
+    ap.add_argument("--voice", default=None, help="default: script.json \"voice\"")
     ap.add_argument("--speed", type=float, default=None)
     ap.add_argument("--no-align", action="store_true")
     args = ap.parse_args()
 
     with open(os.path.join(HERE, "script.json"), encoding="utf-8") as f:
         script = json.load(f)
-    segs = script["segments"]
+    engine = args.engine or script.get("engine", "auto")
     voice = args.voice or script.get("voice", "male")
     speed = args.speed or script.get("speed", 1.0)
-    man = run_tts(segs, args.engine, voice, speed)
+    # per-engine wording (e.g. lines that say which TTS made the voice): "variants": {"minimax": {...}}
+    segs = [dict(s, **s.get("variants", {}).get(engine, {})) for s in script["segments"]]
+    for s in segs:
+        s.pop("variants", None)
+    man = run_tts(segs, engine, voice, speed)
 
     rec = None if args.no_align else load_asr()
 
@@ -235,7 +240,8 @@ def main():
 
     timeline = {"title": script.get("title", ""), "duration": duration, "fps": FPS, "order": order,
                 "scenes": bounds, "segments": out_segs, "env": [round(float(v), 3) for v in env],
-                "engine": out_segs[0]["engine"], "voice": out_segs[0]["voice"]}
+                "engine": out_segs[0]["engine"], "voice": out_segs[0]["voice"],
+                "tts_model": next((m.get("model") for m in man.values() if m.get("model")), None)}
     with open(os.path.join(HERE, "build", "timeline.json"), "w", encoding="utf-8") as f:
         json.dump(timeline, f, ensure_ascii=False, indent=1)
     with open(os.path.join(HERE, "page", "timeline.js"), "w", encoding="utf-8") as f:

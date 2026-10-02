@@ -11,7 +11,7 @@
 | `cover.png` | 封面截图 |
 | `project/` | 脚本、配音/配乐构建脚本、动画页面源码 |
 | `render/` | HTML → MP4 逐帧渲染器（Playwright + ffmpeg） |
-| `tts/` | 配音脚本：优先 edge-tts，连不上时自动换成离线 Kokoro 中文语音 |
+| `tts/` | 配音脚本：MiniMax / edge-tts / 离线 Kokoro 三种引擎 |
 
 ## 内容说明
 
@@ -37,15 +37,26 @@
 | 2:12 | 瓶颈 | 生成几乎免费，理解力才是瓶颈：瓶口随台阶变宽，进到瓶里的信息变多 |
 | 2:30 | 结尾 | 「用网页回答我 / 给我做个视频」，揭秘本视频的制作方式，小人登顶 |
 
-## 配音：为什么不是 edge-tts
+## 配音
 
-edge-tts 需要访问 `speech.platform.bing.com`，制作环境的网络策略拦截了这个域名，所以本版用的是
-**离线开源 TTS**：sherpa-onnx + Kokoro v1.1 中文男声 `zm_045`（另有女声 `zf_036`）。`tts/tts.py`
-会先用 4 秒探测 edge-tts，能连上就用 edge（默认 `zh-CN-YunxiNeural`），连不上才回退到离线语音。
-在能访问该域名的机器上，按下面步骤用 `--engine edge` 重跑即可换成 edge-tts 配音，画面会按新的时长自动对齐。
+`tts/tts.py` 支持三种引擎，`project/script.json` 默认用 **MiniMax**（音色 `male-qn-jingying` 精英青年）：
 
-为了让英文词读得准，口播稿里把 Claude / 3Blue1Brown / Karpathy 写成「克劳德 / 三蓝一棕 / 卡帕西」，
-字幕仍显示原文（见 `project/script.json` 的 `say` 字段）。
+| 引擎 | 说明 |
+|---|---|
+| `minimax` | MiniMax T2A v2 付费 API。密钥只从环境变量 `MINIMAX_API_KEY` 读取，不落盘、不进仓库。中国站密钥走 `api.minimaxi.com`，国际站走 `api.minimax.io`，脚本会依次尝试（也可用 `MINIMAX_API_HOST` 指定）；模型依次尝试 `speech-2.8-hd` → `speech-2.6-hd` → `speech-02-hd`（`MINIMAX_MODEL` 可覆盖） |
+| `edge` | edge-tts，免费在线，默认 `zh-CN-YunxiNeural`，需要能访问 `speech.platform.bing.com` |
+| `sherpa` | 离线开源：sherpa-onnx + Kokoro v1.1 中文男声 `zm_045`，不需要网络 |
+
+> 当前仓库里的 `karpathy-output-ladder.mp4` 是 **离线 Kokoro 配音版**：制作环境的网络策略拦截了
+> MiniMax（`api.minimaxi.com` / `api.minimax.io`）和 edge-tts（`speech.platform.bing.com`）的域名。
+> 放行后用下面「重新生成」里的命令即可换成 MiniMax 配音，画面会按新的语音时长自动对齐。
+
+画面和台词里涉及「这段配音是怎么来的」的地方会跟着引擎变：`script.json` 里的 `variants.minimax`
+会替换第 22、33 句（MiniMax 版说「用 MiniMax 的语音模型合成」，离线版说「免费合成」），
+第 4 级里高亮的配音选项卡片和结尾「怎么做出来的」卡片上的引擎名也随之切换。
+
+为了让英文词读得准，离线版口播稿把 Claude / 3Blue1Brown / Karpathy 写成「克劳德 / 三蓝一棕 / 卡帕西」；
+MiniMax 版直接读 Claude，其余保持中文读法。字幕始终显示原文（见 `script.json` 的 `say` 字段）。
 
 ## 制作流程
 
@@ -67,10 +78,11 @@ cd videos/karpathy-output-ladder
 (cd render && npm install && pip install fonttools brotli && npm run build-gap-fonts && npm run setup-assets)
 # 配音依赖与离线模型
 pip install edge-tts sherpa-onnx soundfile numpy scipy onnx
-./tts/download_models.sh
+./tts/download_models.sh               # 离线语音模型 + 字级对齐用的 Paraformer（MiniMax 版也需要后者）
 
 cd project
-python3 build_audio.py                 # 默认 --engine auto；有网络时可用 --engine edge --voice zh-CN-YunxiNeural
+export MINIMAX_API_KEY=...              # 你自己的 MiniMax 密钥，不要写进仓库
+python3 build_audio.py                 # 默认 MiniMax / male-qn-jingying；离线：--engine sherpa --voice male
 node dump_cues.mjs && python3 make_audio.py
 node ../render/render.mjs --page page/index.html --out ../karpathy-output-ladder.mp4 \
   --audio build/final_audio.wav --workers 4 --crf 18 --preset slow

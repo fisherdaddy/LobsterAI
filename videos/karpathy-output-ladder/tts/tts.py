@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mandarin narration TTS: edge-tts (online) with an offline sherpa-onnx (Kokoro) fallback.
+"""Mandarin narration TTS: MiniMax (paid API) or edge-tts (online), with an offline sherpa-onnx (Kokoro) fallback.
 
   python3 tts.py --in segments.json --out-dir OUT [--engine auto|edge|sherpa] [--voice NAME] [--speed 1.0]
 
@@ -8,7 +8,11 @@ Output        : OUT/<id>.wav  48 kHz mono 16-bit PCM, head/tail silence trimmed 
                 integrated loudness -16 LUFS (constant gain per segment, true peak <= -1 dBTP)
                 OUT/manifest.json  [{id, text, file, duration_sec, engine, voice, ...}]
 
---engine auto  : probe edge-tts (<= ~4 s); use it if reachable, otherwise the offline sherpa voice.
+--engine auto  : MiniMax if MINIMAX_API_KEY is set and the API answers, else edge-tts if reachable
+                 (<= ~4 s probe), else the offline sherpa voice. --engine minimax|edge|sherpa forces one.
+MiniMax        : env MINIMAX_API_KEY (required), MINIMAX_API_HOST (default: try api.minimaxi.com, then
+                 api.minimax.io), MINIMAX_MODEL (default: speech-2.8-hd, then 2.6-hd, then 02-hd).
+                 --voice male -> male-qn-jingying; any MiniMax voice_id can be passed directly.
 --voice        : male | female (default male), an edge voice (zh-CN-YunxiNeural, zh-CN-XiaoxiaoNeural, ...),
                  or a sherpa voice: kokoro-v1.1:zm_045 | zm_045 | zf_036 | zf_047 | zm_yunyang (Kokoro v1.0) | melo ...
                  Run --list-voices for the curated list.
@@ -59,6 +63,14 @@ EDGE_GENDER = {
     "zh-CN-liaoning-XiaobeiNeural": "female", "zh-CN-shaanxi-XiaoniNeural": "female",
 }
 EDGE_BASE_SPEED = 1.10
+
+# MiniMax T2A v2 (paid API). The key is read from the MINIMAX_API_KEY environment variable and never written
+# to disk or logs by this script. Keys are region-bound: Mainland-China accounts use api.minimaxi.com,
+# international accounts api.minimax.io; both are tried (override with MINIMAX_API_HOST=https://...).
+MINIMAX_DEFAULT = {"male": "male-qn-jingying", "female": "female-chengshu"}
+MINIMAX_HOSTS = os.environ.get("MINIMAX_API_HOST", "https://api.minimaxi.com,https://api.minimax.io")
+MINIMAX_MODELS = os.environ.get("MINIMAX_MODEL", "speech-2.8-hd,speech-2.6-hd,speech-02-hd")
+MINIMAX_BASE_SPEED = 1.0
 
 SHERPA_MODELS = {
     # lang "en": espeak British English for the English words inside Chinese text. The default
@@ -265,6 +277,94 @@ def edge_synth(text, voice, engine_speed, retries=3, timeout=20.0):
     raise RuntimeError(f"edge-tts failed: {type(last).__name__}: {msg}")
 
 
+# --------------------------------------------------------------------------------------------- minimax
+_MINIMAX_STATE = {}          # host/model that worked, reused for the remaining segments
+_MINIMAX_RETRY = {1000, 1001, 1002, 1013, 1039}   # unknown/timeout/rate limit/internal/TPM limit
+_MINIMAX_WRONG_KEY = {1004, 2049}                  # authentication failure / invalid key (e.g. wrong region)
+
+
+def _ssl_context():
+    ctx = ssl.create_default_context()
+    for var in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE"):
+        p = os.environ.get(var)
+        if p and os.path.isfile(p):
+            try:
+                ctx.load_verify_locations(cafile=p)
+            except Exception:
+                pass
+    return ctx
+
+
+def _minimax_post(host, key, body, timeout):
+    """-> (json, error). error is a short string when the host could not be reached or answered non-200."""
+    import urllib.error
+    import urllib.request
+    req = urllib.request.Request(host.rstrip("/") + "/v1/t2a_v2", data=json.dumps(body).encode("utf-8"),
+                                 headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
+    try:
+        ctx = _ssl_context() if host.startswith("https") else None
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
+            return json.loads(r.read().decode("utf-8")), None
+    except urllib.error.HTTPError as e:
+        return None, f"HTTP {e.code}"
+    except Exception as e:  # proxy 403 on CONNECT, DNS, TLS, timeout
+        return None, f"{type(e).__name__}: {str(getattr(e, 'reason', e))[:100]}"
+
+
+def minimax_synth(text, voice, engine_speed, retries=4, timeout=90.0):
+    key = os.environ.get("MINIMAX_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("MINIMAX_API_KEY is not set")
+    hosts = [_MINIMAX_STATE["host"]] if "host" in _MINIMAX_STATE else \
+        [h.strip() for h in MINIMAX_HOSTS.split(",") if h.strip()]
+    models = [_MINIMAX_STATE["model"]] if "model" in _MINIMAX_STATE else \
+        [m.strip() for m in MINIMAX_MODELS.split(",") if m.strip()]
+    errors = []
+    for host in hosts:
+        for model in models:
+            body = {"model": model, "text": text, "stream": False, "language_boost": "Chinese",
+                    "output_format": "hex",
+                    "voice_setting": {"voice_id": voice, "speed": round(float(engine_speed), 2), "vol": 1.0,
+                                      "pitch": 0},
+                    "audio_setting": {"sample_rate": 32000, "bitrate": 128000, "format": "mp3", "channel": 1}}
+            outcome = None
+            for attempt in range(retries):
+                resp, err = _minimax_post(host, key, body, timeout)
+                if err:
+                    outcome = ("host", err)
+                    if err.startswith("HTTP 5") or "timed out" in err.lower():
+                        time.sleep(2.0 * (attempt + 1))
+                        continue
+                    break
+                base = resp.get("base_resp") or {}
+                code, msg = base.get("status_code", -1), str(base.get("status_msg", ""))[:120]
+                audio = (resp.get("data") or {}).get("audio")
+                if code == 0 and audio:
+                    _MINIMAX_STATE.update(host=host, model=model)
+                    x, sr = decode_audio_bytes(bytes.fromhex(audio))
+                    return x, sr
+                outcome = ("key" if code in _MINIMAX_WRONG_KEY else "api", f"{code} {msg}".strip())
+                if code in _MINIMAX_RETRY:
+                    time.sleep(3.0 * (attempt + 1))
+                    continue
+                break
+            errors.append(f"{host} {model}: {outcome[1] if outcome else 'no response'}")
+            if outcome and outcome[0] in ("host", "key"):
+                break      # unreachable host or key not valid for this region: try the next host
+    raise RuntimeError("minimax failed: " + " | ".join(errors))
+
+
+def minimax_probe(voice, timeout=8.0):
+    t0 = time.time()
+    if not os.environ.get("MINIMAX_API_KEY", "").strip():
+        return False, "MINIMAX_API_KEY not set", 0.0
+    try:
+        minimax_synth("测试", voice, 1.0, retries=1, timeout=timeout)
+        return True, f"ok ({_MINIMAX_STATE.get('model')} @ {_MINIMAX_STATE.get('host')})", time.time() - t0
+    except Exception as e:
+        return False, str(e)[:300], time.time() - t0
+
+
 # --------------------------------------------------------------------------------------------- sherpa
 _SHERPA_CACHE = {}
 
@@ -446,6 +546,13 @@ def is_edge_voice(voice):
 def plan_engine(engine, voice, probe_timeout):
     """Return (engine, resolved_voice, note)."""
     voice = voice or "male"
+    if engine == "minimax":
+        if voice in ("male", "female"):
+            voice = MINIMAX_DEFAULT[voice]
+        ok, reason, secs = minimax_probe(voice, max(probe_timeout, 8.0))
+        if not ok:
+            raise SystemExit(f"[tts] minimax unavailable: {reason}")
+        return "minimax", voice, reason
     if engine == "edge":
         if voice in ("male", "female"):
             voice = EDGE_DEFAULT[voice]
@@ -459,7 +566,12 @@ def plan_engine(engine, voice, probe_timeout):
             g = gender_of(voice) or "male"
             return "sherpa", SHERPA_DEFAULT[g], f"edge voice {voice} mapped to {g} sherpa voice"
         return "sherpa", canonical_sherpa_voice(voice), "forced"
-    # auto
+    # auto: MiniMax when a key is configured and reachable, then edge-tts, then the offline voice
+    if os.environ.get("MINIMAX_API_KEY", "").strip() and voice in ("male", "female"):
+        ok, reason, secs = minimax_probe(MINIMAX_DEFAULT[voice], max(probe_timeout, 8.0))
+        if ok:
+            return "minimax", MINIMAX_DEFAULT[voice], reason
+        print(f"[tts] minimax unavailable ({reason}); trying edge-tts", file=sys.stderr, flush=True)
     if voice not in ("male", "female") and not is_edge_voice(voice):
         return "sherpa", canonical_sherpa_voice(voice), "explicit sherpa voice"
     edge_voice = EDGE_DEFAULT[voice] if voice in ("male", "female") else voice
@@ -604,7 +716,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--in", dest="inp", help="segments JSON: [{id, text}, ...]")
     ap.add_argument("--out-dir", help="output directory")
-    ap.add_argument("--engine", default="auto", choices=["auto", "edge", "sherpa"])
+    ap.add_argument("--engine", default="auto", choices=["auto", "minimax", "edge", "sherpa"])
     ap.add_argument("--voice", default="male")
     ap.add_argument("--speed", type=float, default=1.0, help="relative to the calibrated explainer pace")
     ap.add_argument("--lufs", type=float, default=TARGET_LUFS)
@@ -626,7 +738,7 @@ def main(argv=None):
     if not (0.5 <= args.speed <= 2.0):
         ap.error("--speed must be within 0.5..2.0")
     if not shutil.which("ffmpeg"):
-        print("[tts] warning: ffmpeg not found (needed only for edge-tts mp3 decoding)", file=sys.stderr)
+        print("[tts] warning: ffmpeg not found (needed for edge-tts / MiniMax mp3 decoding)", file=sys.stderr)
 
     segs = json.load(open(args.inp, encoding="utf-8"))
     if not isinstance(segs, list) or not all(isinstance(s, dict) and "id" in s and "text" in s for s in segs):
@@ -656,12 +768,15 @@ def main(argv=None):
         meta_path = os.path.join(cache_dir, f"{sid}.json")
 
         def plan(e, v):
-            base = EDGE_BASE_SPEED if e == "edge" else sherpa_base_speed(v)
-            spoken = text if (e == "edge" or args.no_normalize) else normalize_for_sherpa(text, pre, post)
+            base = {"edge": EDGE_BASE_SPEED, "minimax": MINIMAX_BASE_SPEED}.get(e) or sherpa_base_speed(v)
+            spoken = text if (e in ("edge", "minimax") or args.no_normalize) else normalize_for_sherpa(text, pre, post)
             eng_speed = round(base * args.speed, 4)
-            key = json.dumps(dict(v=PIPELINE_VERSION, text=text, engine=e, voice=v, speed=args.speed,
-                                  engine_speed=eng_speed, rules=rules_fp if e == "sherpa" else None,
-                                  lufs=args.lufs, sr=OUT_SR, pad=PAD_MS), ensure_ascii=False, sort_keys=True)
+            kd = dict(v=PIPELINE_VERSION, text=text, engine=e, voice=v, speed=args.speed,
+                      engine_speed=eng_speed, rules=rules_fp if e == "sherpa" else None,
+                      lufs=args.lufs, sr=OUT_SR, pad=PAD_MS)
+            if e == "minimax":
+                kd["models"] = MINIMAX_MODELS
+            key = json.dumps(kd, ensure_ascii=False, sort_keys=True)
             return spoken, eng_speed, hashlib.sha256(key.encode()).hexdigest()
 
         spoken, eng_speed, h = plan(seg_engine, seg_voice)
@@ -681,7 +796,10 @@ def main(argv=None):
             t0 = time.time()
             fallback = False
             try:
-                if seg_engine == "edge":
+                if seg_engine == "minimax":
+                    x, sr = minimax_synth(spoken, seg_voice, eng_speed)
+                    time.sleep(0.3)   # stay well under the per-minute request limit
+                elif seg_engine == "edge":
                     try:
                         x, sr = edge_synth(spoken, seg_voice, eng_speed)
                     except Exception as e:
@@ -713,6 +831,7 @@ def main(argv=None):
                          lufs=None if info["lufs"] is None else round(info["lufs"], 2),
                          peak_dbfs=round(info["peak_dbfs"], 2), limiter_db=round(info["limiter_db"], 2),
                          rtf=round(synth_s / max(raw_dur, 1e-6), 3), fallback=fallback or None, cached=False,
+                         model=_MINIMAX_STATE.get("model") if seg_engine == "minimax" else None,
                          hash=h)
             entry = {k: v for k, v in entry.items() if v is not None}
             json.dump(dict(hash=h, frames=len(pcm), entry=entry), open(meta_path, "w"), ensure_ascii=False, indent=1)
