@@ -6,7 +6,7 @@
 
 | 文件 | 说明 |
 |---|---|
-| `karpathy-output-ladder.mp4` | 成片：1920×1080 · 30fps · H.264 + AAC 48kHz 立体声 · 2 分 58 秒 · 中文配音 + 烧录字幕 |
+| `karpathy-output-ladder.mp4` | 成片：1920×1080 · 30fps · H.264 + AAC 48kHz 立体声 · 3 分 00 秒 · MiniMax 中文配音（精英青年音色）+ 烧录字幕 |
 | `karpathy-output-ladder.srt` | 同步字幕文件（方便上传平台时单独挂载） |
 | `cover.png` | 封面截图 |
 | `project/` | 脚本、配音/配乐构建脚本、动画页面源码 |
@@ -30,12 +30,12 @@
 | 0:00 | 开场 | 大模型几秒刷出上万字 → 「读得完？看得懂？」 |
 | 0:08 | 推文 | Karpathy 推文要点卡片 → 等距 3D 四级台阶，小人一级级往上跳 |
 | 0:22 | 01 文字 | 勾股定理的文字定义逐字打出，「脑内绘图中……」 |
-| 0:37 | 02 图解 | 手绘风三角形 + 三个正方形，9 + 16 个方块飞进 25 格的大正方形 |
-| 0:51 | 03 网页 | 「请用 HTML 组织回答」→ 浏览器里拖滑块验证 a²+b²=c²；镜头实验室示意 |
-| 1:15 | 04 视频 | 深色 3Blue1Brown 风格：四个三角形换位置，c² 变成 a² + b²；配音的波形就是你正在听的声音 |
-| 1:52 | 为什么是现在 | 成本曲线跌破「值得做的门槛」，英文原句逐词高亮，小工具被扔进垃圾桶 |
-| 2:12 | 瓶颈 | 生成几乎免费，理解力才是瓶颈：瓶口随台阶变宽，进到瓶里的信息变多 |
-| 2:30 | 结尾 | 「用网页回答我 / 给我做个视频」，揭秘本视频的制作方式，小人登顶 |
+| 0:38 | 02 图解 | 手绘风三角形 + 三个正方形，9 + 16 个方块飞进 25 格的大正方形 |
+| 0:53 | 03 网页 | 「请用 HTML 组织回答」→ 浏览器里拖滑块验证 a²+b²=c²；镜头实验室示意 |
+| 1:16 | 04 视频 | 深色 3Blue1Brown 风格：四个三角形换位置，c² 变成 a² + b²；配音的波形就是你正在听的声音 |
+| 1:53 | 为什么是现在 | 成本曲线跌破「值得做的门槛」，英文原句逐词高亮，小工具被扔进垃圾桶 |
+| 2:13 | 瓶颈 | 生成几乎免费，理解力才是瓶颈：瓶口随台阶变宽，进到瓶里的信息变多 |
+| 2:33 | 结尾 | 「用网页回答我 / 给我做个视频」，揭秘本视频的制作方式，小人登顶 |
 
 ## 配音
 
@@ -47,9 +47,9 @@
 | `edge` | edge-tts，免费在线，默认 `zh-CN-YunxiNeural`，需要能访问 `speech.platform.bing.com` |
 | `sherpa` | 离线开源：sherpa-onnx + Kokoro v1.1 中文男声 `zm_045`，不需要网络 |
 
-> 当前仓库里的 `karpathy-output-ladder.mp4` 是 **离线 Kokoro 配音版**：制作环境的网络策略拦截了
-> MiniMax（`api.minimaxi.com` / `api.minimax.io`）和 edge-tts（`speech.platform.bing.com`）的域名。
-> 放行后用下面「重新生成」里的命令即可换成 MiniMax 配音，画面会按新的语音时长自动对齐。
+> 当前的 `karpathy-output-ladder.mp4` 是 **MiniMax 配音版**（`speech-2.8-hd` · `male-qn-jingying`，经 `api.minimaxi.com`）。
+> 最早的一版用的是离线 Kokoro 语音（当时网络策略还没放行 MiniMax），仍可在 git 历史里找到；
+> 换引擎后画面会按新的语音时长自动对齐。
 
 画面和台词里涉及「这段配音是怎么来的」的地方会跟着引擎变：`script.json` 里的 `variants.minimax`
 会替换第 22、33 句（MiniMax 版说「用 MiniMax 的语音模型合成」，离线版说「免费合成」），
@@ -86,5 +86,6 @@ python3 build_audio.py                 # 默认 MiniMax / male-qn-jingying；离
 node dump_cues.mjs && python3 make_audio.py
 node ../render/render.mjs --page page/index.html --out ../karpathy-output-ladder.mp4 \
   --audio build/final_audio.wav --workers 4 --crf 18 --preset slow
+python3 make_srt.py                    # 同步更新 ../karpathy-output-ladder.srt
 # 预览：--scale 0.5 出半分辨率小样；--frames 12.5,40 输出指定时刻的截图
 ```
