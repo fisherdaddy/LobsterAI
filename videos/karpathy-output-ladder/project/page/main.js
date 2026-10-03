@@ -83,7 +83,7 @@
       sc.renderFn(t);
     }
     // HUD
-    const r1 = SC('rung1').start, bnEnd = SC('bottleneck').end;
+    const r1 = SC('rung1').start, bnEnd = SC('outro').start;   // HUD lives from the first rung until the outro
     const hudA = Math.min(prog(t, r1 + 0.2, r1 + 0.8), 1 - prog(t, bnEnd - 0.6, bnEnd - 0.1)) * (1 - dark);
     css(hudTL, { opacity: f3(hudA) });
     const trA = Math.min(prog(t, r1 + 0.2, r1 + 0.8), 1 - prog(t, SC('rung4').end - 0.4, SC('rung4').end)) * (1 - dark);

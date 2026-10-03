@@ -2,7 +2,7 @@
 (function () {
   const L = window.L;
   const { clamp, lerp, prog, ease, ep, win, kf, S, E, W, WE, SC, cue, h, sv, css, attr, show, fadeUp, pop, typer,
-    prepDraw, draw, drawSeq, roughSvg, scene } = window.L;
+    prepDraw, draw, drawSeq, roughSvg, scene, f3 } = window.L;
 
   // ===================================================================== shared components
   // Rung header (left column)
@@ -164,15 +164,16 @@
 
   // ===================================================================== INTRO
   scene('intro', (root) => {
-    const body = h('div', { class: 'post-body' }, '怎样更好地「', h('span', { class: 'hl' }, '读懂'), '」大模型的输出？');
+    // the tweet's verbatim opening line + translation; 'understand' / 读懂 light up on the spoken word
+    const body = h('div', { class: 'post-en' }, 'We’ll be spending a lot more time trying to ', h('span', { class: 'hl' }, 'understand'), ' the outputs of language models.');
+    const zh = h('div', { class: 'post-zh' }, '以后，我们会花越来越多的时间，去', h('span', { class: 'hl' }, '读懂'), '大模型的输出。');
     const card = h('div', { class: 'card abs', id: 'in-card' },
       h('div', { class: 'post-top' }, h('div', { class: 'avatar' }, 'AK'),
         h('div', {}, h('div', { class: 'post-name' }, 'Andrej Karpathy'), h('div', { class: 'post-handle' }, '@karpathy · 2026年10月2日')),
-        h('div', { class: 'post-tag' }, '推文要点 · 编译')),
-      body,
-      h('div', { class: 'post-note' }, '一条关于“如何阅读大模型输出”的建议'));
+        h('div', { class: 'post-tag' }, '推文原文 · 开头')),
+      body, zh);
     root.append(card);
-    const hl = body.querySelector('.hl');
+    const hls = [body, zh].map((el) => el.querySelector('.hl'));
     const stairs = window.makeStairs(root, {});
     const tCard = S('s03') - 0.35, tOut = S('s04') - 0.15;
     const build = [0, 1, 2, 3].map((i) => S('s04') + 0.2 + i * 0.3);
@@ -188,7 +189,8 @@
       const p = ep(t, tCard, 0.7);
       const q = ep(t, tOut, 0.6, ease.inOutCubic);
       css(card, { opacity: (Math.min(p, 1 - q)).toFixed(3), transform: `translateY(${((1 - p) * 60 - q * 120).toFixed(1)}px) scale(${lerp(1, 0.9, q).toFixed(4)})` });
-      css(hl, { backgroundSize: `${(100 * ep(t, W('s03', '读懂'), 0.5)).toFixed(1)}% 100%` });
+      const hp = `${(100 * ep(t, W('s03', '读懂'), 0.5)).toFixed(1)}% 100%`;
+      hls.forEach((el) => css(el, { backgroundSize: hp }));
       let f = null;
       if (t >= hops[0] - 0.6) {
         f = kf(t, [[hops[0], 0], [hops[0] + 0.38, 1, ease.inOutQuad], [hops[1], 1], [hops[1] + 0.38, 2, ease.inOutQuad], [hops[2], 2], [hops[2] + 0.38, 3, ease.inOutQuad]]);
@@ -197,63 +199,123 @@
     };
   });
 
-  // ===================================================================== RUNG 1 — text
+  // ===================================================================== RUNG 1 — writing (ASD-STE100)
   scene('rung1', (root) => {
-    const head = window.makeRungHead(root, '01', '文字', 'TEXT', '大模型默认的回答方式');
-    const P1 = '在直角三角形中，两条直角边的平方和，等于斜边的平方。';
-    const P2 = '设直角边为 a、b，斜边为 c，则 a² + b² = c²。例如 a = 3、b = 4 时，c = 5。';
-    const p = h('div', { class: 'doc-p' });
-    const checks = h('div', { class: 'checks' }, ...['定义', '公式', '例子'].map((x) => h('div', { class: 'chk' }, h('b', {}, '✓ '), x)));
-    const doc = h('div', { class: 'card abs', id: 'r1-doc' }, h('div', { class: 'doc-h' }, '勾股定理', h('span', { class: 'ico' }, 'TEXT')), p, checks);
-    root.append(doc);
-    const type = typer(p, P1 + P2);
-    // thought cloud + head
+    const head = window.makeRungHead(root, '01', '文字', 'WRITING', '让它用 ASD-STE100 来写');
+    const PLANE = '<svg width="74" height="74" viewBox="0 0 74 74"><circle cx="37" cy="37" r="36" fill="#1f1b17"/><path d="M37 13 C40 13 41 17 41 21 L41 31 L59 41 L59 46 L41 40 L41 52 L47 57 L47 61 L37 58 L27 61 L27 57 L33 52 L33 40 L15 46 L15 41 L33 31 L33 21 C33 17 34 13 37 13 Z" fill="#fffaf0"/></svg>';
+    // --- spec card
+    const year = (y, txt) => h('div', { class: 'yr' }, h('b', {}, y), h('span', {}, txt));
+    const years = [year('1979', '航空业开始制定'), year('1986', '首版指南发布'), year('2005', '定名 ASD-STE100')];
+    const spec = h('div', { class: 'card abs', id: 'r1-spec' },
+      h('div', { class: 'sp-top' }, h('div', { class: 'plane', html: PLANE }),
+        h('div', {}, h('div', { class: 'sp-name' }, 'ASD-STE100'), h('div', { class: 'sp-sub' }, 'Simplified Technical English · ', h('span', { class: 'hl' }, '简化技术英语')))),
+      h('div', { class: 'sp-origin' }, '最早用途：', h('b', {}, '飞机维修手册'), h('span', { class: 'sp-src' }, '受控语言规范 · 由欧洲航空航天与防务工业协会维护')),
+      h('div', { class: 'yrs' }, ...years));
+    root.append(spec);
+    const specHl = spec.querySelector('.hl'), plane = spec.querySelector('.plane'), origin = spec.querySelector('.sp-origin');
+    // --- rule chips
+    const rule = (zh, en) => h('div', { class: 'rule-chip' }, h('div', { class: 'z' }, zh), h('div', { class: 'e' }, en));
+    const rules = [rule('一词一义', 'ONE WORD, ONE MEANING'), rule('一句一个指令', 'ONE INSTRUCTION PER SENTENCE'), rule('步骤句 ≤ 20 个词', 'MAX 20 WORDS')];
+    const ruleRow = h('div', { class: 'abs', id: 'r1-rules' }, ...rules);
+    root.append(ruleRow);
+    // --- before / after
+    const BEFORE = [['It is '], ['imperative', 1], [' that the operator '], ['ensures', 1], [' the hydraulic reservoir is '], ['replenished', 1], [' '], ['prior to', 1], [' '], ['commencing', 1], [' operation.']];
+    const AFTER = [['Make sure', 2], [' that the hydraulic reservoir is '], ['full', 2], [' '], ['before', 2], [' you '], ['start', 2], [' the operation.']];
+    const sentence = (parts, cls) => {
+      const el = h('div', { class: 'ste-s' }); const marks = [];
+      parts.forEach(([w, k]) => { if (k) { const m = h('span', { class: cls }, w); marks.push(m); el.append(m); } else el.append(w); });
+      return [el, marks];
+    };
+    const [bS, bMarks] = sentence(BEFORE, 'bad');
+    const [aS, aMarks] = sentence(AFTER, 'good');
+    const before = h('div', { class: 'card abs ste-card', id: 'r1-before' },
+      h('div', { class: 'ste-lbl bad-l' }, '× 原文：用词绕、一个词多种意思'), bS);
+    const wc = h('div', { class: 'wc' }, h('b', {}, '13'), ' 个词 · 上限 20');
+    const gloss = h('div', { class: 'ste-zh' }, '开始操作前，确认液压油箱是满的。');
+    const after = h('div', { class: 'card abs ste-card', id: 'r1-after' },
+      h('div', { class: 'ste-lbl good-l' }, '✓ ASD-STE100 改写', wc), aS, gloss);
+    const arrow = h('div', { class: 'abs ste-arrow', html: '<svg width="60" height="54" viewBox="0 0 60 54"><path d="M30 4 V40 M14 26 L30 44 L46 26" fill="none" stroke="#b85a3a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>' });
+    const srcNote = h('div', { class: 'abs credit', style: 'left:800px;top:146px' }, '例句来自 Karpathy 推文配图');
+    root.append(before, arrow, after, srcNote);
+    const llm = h('div', { class: 'abs llm-pill' }, '大模型对这套规范很熟 ✓');
+    root.append(llm);
+    // --- strictness meter: "80% of the way to ASD-STE100"
+    const meter = h('div', { class: 'card abs', id: 'r1-meter' },
+      h('div', { class: 'm-top' }, h('span', {}, '写作约束'), h('span', { class: 'm-q' }, '“80% of the way to ASD-STE100”')),
+      h('div', { class: 'm-track' }, h('div', { class: 'm-fill' }), h('div', { class: 'm-knob' }), h('div', { class: 'm-tick', style: 'left:80%' })),
+      h('div', { class: 'm-ends' }, h('span', {}, '随便写'), h('span', { class: 'm-80' }, '八成就好'), h('span', {}, '100% 原版规范')));
+    root.append(meter);
+    const mFill = meter.querySelector('.m-fill'), mKnob = meter.querySelector('.m-knob'), m80 = meter.querySelector('.m-80');
+    // --- thought cloud + head (the picture you still have to draw yourself)
     const think = sv('svg', { width: 1920, height: 1080, style: 'position:absolute;left:0;top:0' });
     root.append(think);
     const cloud = sv('g', {}, think);
     const rc = roughSvg(think);
-    const cl = rc.ellipse(0, 0, 470, 270, { seed: 11, roughness: 1.6, stroke: '#4a433b', strokeWidth: 2.4, fill: '#fffaf0', fillStyle: 'solid' });
-    cloud.appendChild(cl);
+    cloud.appendChild(rc.ellipse(0, 0, 470, 270, { seed: 11, roughness: 1.6, stroke: '#4a433b', strokeWidth: 2.4, fill: '#fffaf0', fillStyle: 'solid' }));
     const tri = rc.polygon([[-110, 70], [-110, -60], [70, 70]], { seed: 3, roughness: 2.6, bowing: 3, stroke: '#b85a3a', strokeWidth: 3.2 });
     cloud.appendChild(tri);
     const triD = prepDraw(Array.from(tri.querySelectorAll('path')));
-    const qs = [];
-    [[110, -40, 52], [150, 30, 40], [40, -80, 34]].forEach(([x, y, s], i) => {
-      const q = sv('text', { x, y, 'font-size': s, 'font-family': 'LXGW WenKai', fill: '#b85a3a', 'text-anchor': 'middle' }, cloud);
-      q.textContent = '?'; qs.push(q);
-    });
+    const qs = [[110, -40, 52], [150, 30, 40], [40, -80, 34]].map(([x, y, sz]) => { const q = sv('text', { x, y, 'font-size': sz, 'font-family': 'LXGW WenKai', fill: '#b85a3a', 'text-anchor': 'middle' }, cloud); q.textContent = '?'; return q; });
     const dots = [[226, 168, 16], [254, 202, 11], [276, 230, 7]].map(([x, y, r]) => sv('circle', { cx: x, cy: y, r, fill: '#fffaf0', stroke: '#4a433b', 'stroke-width': 2.2 }, cloud));
     const lbl = sv('text', { x: -10, y: 125, 'font-size': 30, 'font-family': 'LXGW WenKai', fill: '#4a433b', 'text-anchor': 'middle' }, cloud);
     lbl.textContent = '脑内绘图中……';
     const headG = sv('g', {}, think);
     sv('path', { d: 'M0,0 C-8,-58 18,-112 70,-118 C120,-122 150,-88 150,-50 C150,-30 160,-22 168,-8 C172,0 164,4 156,6 L158,30 C158,46 142,50 128,48 L124,80 L40,80 L40,40 C14,30 2,18 0,0 Z', fill: '#2d2823' }, headG);
 
-    const tDoc = S('s06') + 0.55;
-    const tType0 = W('s07', '勾股定理') + 0.6, tType1 = E('s07') + 0.1, tType2 = S('s08') + 1.3;
-    const tChk = W('s08', '信息') + 0.25;
-    const tThink = W('s08', '可那张图') - 0.15;
-    cue('whoosh', SC('rung1').start + 0.2, 0.4);
-    cue('pop', tDoc, 0.5);
-    cue('type', tType0, 0.5, { dur: tType2 - tType0 });
-    [0, 1, 2].forEach((i) => cue('tick', tChk + i * 0.16, 0.6));
-    cue('pop', tThink, 0.6);
-    cue('scribble', tThink + 0.45, 0.6, { dur: 1.4 });
+    // ---------------- timing
+    const sc = SC('rung1');
+    const tSpec = W('s06', 'ASD') - 0.25, tHl = W('s07', '简化') - 0.1, tPlane = W('s07', '飞机') - 0.2, tYears = W('s07', '最早') - 0.1;
+    const tR = [W('s08', '一个词') - 0.1, W('s08', '一句话') - 0.1, W('s08', '二十') - 0.15];
+    const tOut1 = S('s08a') - 0.35;
+    const tBefore = S('s08a') - 0.1, tBad = W('s08a', '绕口') - 0.05, tAfter = W('s08a', '改写') - 0.1, tGloss = W('s08a', '开始操作前') - 0.1;
+    const tLLM = W('s08b', '很熟') - 0.1, tUp = S('s08b') + 0.1, tMeter = W('s08b', '太死板') - 0.3, t80 = W('s08b', '八成') - 0.1;
+    const tThink = W('s08c', '那张图') - 0.2;
+    cue('whoosh', sc.start + 0.2, 0.4); cue('pop', tSpec, 0.55); cue('hl', tHl, 0.45); cue('whoosh', tPlane, 0.35);
+    tR.forEach((x) => cue('tick', x, 0.7));
+    cue('whoosh', tBefore, 0.4); bMarks.forEach((m, i) => cue('scribble', tBad + i * 0.16, 0.25, { dur: 0.18 }));
+    cue('ding', tAfter + 0.15, 0.6); cue('pop', tLLM, 0.5); cue('slide', tMeter + 0.3, 0.45, { dur: 1.4 }); cue('chime', t80 + 0.05, 0.55);
+    cue('pop', tThink, 0.6); cue('scribble', tThink + 0.45, 0.6, { dur: 1.4 });
+
     return (t) => {
-      head(t, SC('rung1').start + 0.25);
-      fadeUp(doc, t, tDoc, 0.7, 50);
-      const n = t < tType1 ? lerp(0, P1.length, prog(t, tType0, tType1)) : lerp(P1.length, P1.length + P2.length, prog(t, tType1, tType2));
-      type(n);
-      Array.from(checks.children).forEach((c, i) => pop(c, t, tChk + i * 0.16, 0.4));
+      head(t, sc.start + 0.25);
+      // phase 1-2: spec card + rules, then make room for the example
+      const o1 = 1 - ep(t, tOut1, 0.45, ease.inOutCubic);
+      const sp = ep(t, tSpec, 0.65);
+      css(spec, { opacity: f3(Math.min(sp, o1)), transform: `translateY(${((1 - sp) * 50 - (1 - o1) * 40).toFixed(1)}px)` });
+      css(specHl, { backgroundSize: `${(100 * ep(t, tHl, 0.5)).toFixed(1)}% 100%` });
+      const pp = ep(t, tPlane, 0.9, ease.outCubic);
+      css(plane, { transform: `translate(${((1 - pp) * -60).toFixed(1)}px, ${((1 - pp) * 30).toFixed(1)}px) rotate(${((1 - pp) * -25).toFixed(1)}deg)` });
+      css(origin, { opacity: f3(0.25 + 0.75 * ep(t, tPlane, 0.5)) });
+      years.forEach((y, i) => pop(y, t, tYears + i * 0.22, 0.4));
+      rules.forEach((r, i) => pop(r, t, tR[i], 0.45));
+      css(ruleRow, { opacity: f3(o1), transform: `translateY(${(-(1 - o1) * 40).toFixed(1)}px)` });
+      // phase 3: before -> after
+      const ob = 1 - ep(t, tUp, 0.5, ease.inOutCubic);
+      fadeUp(srcNote, t, tBefore + 0.3, 0.5, 10, tThink, 0.4);
+      const bp = ep(t, tBefore, 0.55);
+      css(before, { opacity: f3(Math.min(bp, ob)), transform: `translateY(${((1 - bp) * 40 - (1 - ob) * 30).toFixed(1)}px)` });
+      bMarks.forEach((m, i) => css(m, { backgroundSize: `${(100 * ep(t, tBad + i * 0.16, 0.25)).toFixed(1)}% 100%`, color: t > tBad + i * 0.16 ? '#b23a2a' : '#3a342d' }));
+      const ap = ep(t, tAfter, 0.6);
+      const up = ep(t, tUp, 0.8, ease.inOutCubic);
+      css(after, { opacity: f3(ap), transform: `translateY(${((1 - ap) * 40 - up * 300).toFixed(1)}px)` });
+      css(arrow, { opacity: f3(Math.min(ep(t, tAfter - 0.25, 0.3), ob)), transform: `translateY(${((1 - ep(t, tAfter - 0.25, 0.4)) * -16).toFixed(1)}px)` });
+      aMarks.forEach((m, i) => css(m, { backgroundSize: `${(100 * ep(t, tAfter + 0.35 + i * 0.12, 0.3)).toFixed(1)}% 100%` }));
+      pop(wc, t, tAfter + 0.7, 0.4);
+      fadeUp(gloss, t, tGloss, 0.5, 12);
+      pop(llm, t, tLLM, 0.45);
+      // phase 4: strictness meter 0 -> 100% -> 80%
+      fadeUp(meter, t, tMeter, 0.55, 30);
+      const v = kf(t, [[tMeter + 0.3, 0], [tMeter + 1.1, 1, ease.inOutCubic], [t80, 1], [t80 + 0.6, 0.8, ease.outBack]]);
+      css(mFill, { width: `${(v * 100).toFixed(2)}%` }); css(mKnob, { left: `${(v * 100).toFixed(2)}%` });
+      css(m80, { opacity: f3(ep(t, t80, 0.4)) });
+      // phase 5: still have to picture it yourself
+      const dim = ep(t, tThink - 0.1, 0.5);
+      [after, meter, llm].forEach((el) => { if (dim > 0) css(el, { filter: `blur(${(dim * 1.6).toFixed(2)}px)`, opacity: f3(lerp(1, 0.4, dim) * (el === after ? ap : 1)) }); else css(el, { filter: 'none' }); });
       const cp = ep(t, tThink, 0.55, ease.outBack);
       attr(cloud, { transform: `translate(1420 610) scale(${lerp(0.5, 1, cp).toFixed(3)})`, opacity: clamp(cp * 1.6).toFixed(3) });
-      attr(headG, { transform: 'translate(1800 952) scale(-0.86 0.86)', opacity: clamp(ep(t, tThink - 0.2, 0.4) * 1.0).toFixed(3) });
-      const dim = ep(t, tThink - 0.1, 0.5);
-      css(doc, { filter: dim > 0.001 ? `blur(${(dim * 1.6).toFixed(2)}px)` : 'none' });
-      if (dim > 0) css(doc, { opacity: (lerp(1, 0.42, dim)).toFixed(3) });
+      attr(headG, { transform: 'translate(1800 952) scale(-0.86 0.86)', opacity: clamp(ep(t, tThink - 0.2, 0.4)).toFixed(3) });
       dots.forEach((d, i) => attr(d, { opacity: clamp(prog(t, tThink + 0.05 * i, tThink + 0.05 * i + 0.2)).toFixed(2) }));
-      // scribbled triangle draws, wobbles, partially erases (loop-ish)
-      const dp = prog(t, tThink + 0.45, tThink + 1.6);
-      drawSeq(triD, dp);
+      drawSeq(triD, prog(t, tThink + 0.45, tThink + 1.6));
       qs.forEach((q, i) => attr(q, { opacity: clamp(prog(t, tThink + 1.0 + i * 0.25, tThink + 1.3 + i * 0.25)).toFixed(2), transform: `translate(0 ${(Math.sin((t + i) * 3) * 4).toFixed(1)})` }));
     };
   });
@@ -317,7 +379,13 @@
     css(okTxt, { left: '1610px', top: '600px', color: '#3f8a4c' });
     root.append(okTxt);
 
+    const img = h('img', { src: 'assets/ste100_overview.png', alt: '' });
+    const imgCard = h('div', { class: 'card abs', id: 'r2-img' }, h('div', { class: 'tw-clip' }, img),
+      h('div', { class: 'tw-cap' }, h('b', {}, 'Karpathy 推文配图'), '：ASD-STE100 一页速览（结构 · 例句 · 词典 · 规则上限 · 历史）'));
+    root.append(imgCard);
     const sc = SC('rung2');
+    const tImg = S('s09a') - 0.25, tZoom = W('s09a', '整份') - 0.1, tImgOut = S('s10') - 0.8;
+    cue('whoosh', tImg, 0.45); cue('hl', tZoom, 0.4);
     const tBeb = sc.start + 0.1, tZh = S('s09') - 0.05, tBebOut = S('s09') + 1.0;
     const tHead = S('s09') + 1.05;
     const tTri = S('s10') - 0.55, tSq = W('s10', '三条边') - 0.1;
@@ -333,6 +401,9 @@
     return (t) => {
       beb(t, tBeb, tZh, tBebOut);
       head(t, tHead);
+      const ip = ep(t, tImg, 0.6), iq = 1 - ep(t, tImgOut, 0.45, ease.inOutCubic);
+      css(imgCard, { opacity: f3(Math.min(ip, iq)), transform: `translateY(${((1 - ip) * 40).toFixed(1)}px) scale(${lerp(1, 0.94, 1 - iq).toFixed(4)})` });
+      css(img, { transform: `scale(${(1 + 0.55 * ep(t, tZoom, 2.2, ease.inOutCubic)).toFixed(4)})` });
       draw(dT, ep(t, tTri, 0.8, ease.inOutCubic));
       fillT.forEach((f) => css(f, { opacity: ep(t, tTri + 0.5, 0.5).toFixed(3) }));
       draw(dA, ep(t, tSq, 0.55, ease.inOutCubic));

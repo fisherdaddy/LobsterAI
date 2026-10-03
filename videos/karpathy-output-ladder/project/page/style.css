@@ -98,9 +98,9 @@ svg { overflow: visible; }
 .post-name { font-family: var(--inter); font-weight: 700; font-size: 32px; }
 .post-handle { font-family: var(--inter); font-size: 22px; color: var(--muted); margin-top: 4px; }
 .post-tag { margin-left: auto; font-size: 20px; color: var(--coral-d); border: 1.5px solid #ebc3b2; padding: 6px 14px; border-radius: 999px; }
-.post-body { font-family: var(--serif); font-weight: 700; font-size: 58px; line-height: 1.38; margin-top: 38px; }
-.post-body .hl { background: linear-gradient(transparent 62%, rgba(217,119,87,0.32) 62%); background-size: 0% 100%; background-repeat: no-repeat; }
-.post-note { font-size: 24px; color: var(--muted); margin-top: 26px; }
+.post-en { font-family: var(--disp); font-size: 58px; line-height: 1.2; margin-top: 36px; color: var(--ink); }
+.post-zh { font-family: var(--serif); font-size: 32px; line-height: 1.5; color: var(--ink2); margin-top: 24px; padding-top: 22px; border-top: 1px solid #ebe2d3; }
+.post-en .hl, .post-zh .hl { background: linear-gradient(transparent 62%, rgba(217,119,87,0.34) 62%); background-size: 0% 100%; background-repeat: no-repeat; }
 
 .stair-lbl { position: absolute; white-space: nowrap; }
 .stair-lbl .n { font-family: var(--disp); font-size: 44px; line-height: 1; color: var(--coral); }
@@ -218,3 +218,52 @@ svg { overflow: visible; }
 #ot-end .s { font-family: var(--serif); font-size: 44px; color: var(--ink2); margin-top: 30px; letter-spacing: 0.08em; }
 #ot-end .s b { color: var(--coral); font-weight: 400; margin: 0 14px; }
 #ot-end .c { font-size: 25px; color: var(--muted); margin-top: 66px; line-height: 1.8; text-align: center; }
+
+/* rung1 — ASD-STE100 */
+#r1-spec { left: 800px; top: 190px; width: 990px; padding: 40px 48px 38px; }
+.sp-top { display: flex; align-items: center; gap: 28px; }
+.sp-name { font-family: var(--inter); font-weight: 800; font-size: 60px; letter-spacing: -0.01em; line-height: 1.05; }
+.sp-sub { font-family: var(--inter); font-size: 26px; color: var(--ink2); margin-top: 8px; }
+.sp-sub .hl { font-family: var(--serif); font-weight: 700; color: var(--ink); background: linear-gradient(transparent 60%, rgba(217,119,87,0.35) 60%) no-repeat; background-size: 0% 100%; }
+.sp-origin { font-size: 30px; margin-top: 30px; color: var(--ink2); }
+.sp-origin b { color: var(--coral-d); font-weight: 700; }
+.sp-src { display: block; font-size: 19px; color: var(--muted); margin-top: 6px; }
+.yrs { display: flex; gap: 34px; margin-top: 24px; }
+.yr { display: flex; align-items: baseline; gap: 10px; }
+.yr b { font-family: var(--disp); font-weight: 400; font-size: 40px; color: var(--coral); }
+.yr span { font-size: 21px; color: var(--ink2); }
+#r1-rules { left: 800px; top: 610px; display: flex; gap: 22px; }
+.rule-chip { padding: 18px 26px 16px; border-radius: 16px; background: var(--card); box-shadow: 0 10px 30px rgba(70,50,25,0.12), 0 0 0 1px rgba(70,50,25,0.05); }
+.rule-chip .z { font-family: var(--serif); font-weight: 900; font-size: 36px; }
+.rule-chip .e { font-family: var(--inter); font-weight: 600; font-size: 13px; letter-spacing: 0.14em; color: var(--muted); margin-top: 6px; }
+.ste-card { left: 800px; width: 990px; padding: 28px 40px 30px; }
+#r1-before { top: 186px; }
+#r1-after { top: 500px; }
+.ste-lbl { display: flex; justify-content: space-between; align-items: baseline; font-size: 22px; font-weight: 700; }
+.bad-l { color: #b23a2a; }
+.good-l { color: #2f6b3a; }
+.ste-s { font-family: var(--disp); font-size: 42px; line-height: 1.34; color: #2b2620; margin-top: 12px; }
+.ste-s .bad { background: linear-gradient(transparent 58%, rgba(214,80,60,0.30) 58%) no-repeat; background-size: 0% 100%; }
+.ste-s .good { color: #24572e; background: linear-gradient(transparent 60%, rgba(94,148,103,0.38) 60%) no-repeat; background-size: 0% 100%; }
+.wc { font-family: var(--inter); font-size: 20px; font-weight: 600; color: #2f6b3a; }
+.wc b { font-size: 28px; font-weight: 800; }
+.ste-zh { font-family: var(--serif); font-size: 32px; color: var(--ink2); margin-top: 14px; }
+.ste-arrow { left: 1265px; top: 436px; }
+.llm-pill { left: 1480px; top: 172px; padding: 10px 20px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 24px; font-weight: 500; z-index: 5; }
+#r1-meter { left: 800px; top: 560px; width: 990px; padding: 30px 40px 26px; }
+.m-top { display: flex; justify-content: space-between; align-items: baseline; }
+.m-top span:first-child { font-size: 24px; font-weight: 700; }
+.m-q { font-family: var(--disp); font-style: italic; font-size: 36px; color: var(--coral-d); }
+.m-track { position: relative; height: 14px; border-radius: 7px; background: #e9e1d3; margin: 36px 0 20px; }
+.m-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; background: linear-gradient(90deg, #ecc0aa, #d97757); }
+.m-knob { position: absolute; top: 50%; width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 5px solid var(--coral); transform: translate(-50%, -50%); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+.m-tick { position: absolute; top: -12px; bottom: -12px; width: 3px; background: #b85a3a; opacity: 0.45; }
+.m-ends { display: flex; justify-content: space-between; align-items: baseline; font-size: 22px; color: var(--muted); }
+.m-80 { font-family: var(--kai); font-size: 32px; color: var(--coral-d); }
+
+/* rung2 — tweet image */
+#r2-img { left: 790px; top: 160px; width: 1010px; padding: 12px 12px 14px; }
+.tw-clip { width: 986px; height: 493px; overflow: hidden; border-radius: 12px; background: #fff; }
+.tw-clip img { width: 986px; height: 493px; display: block; transform-origin: 52.8% 27%; }
+.tw-cap { font-size: 21px; color: var(--muted); margin-top: 12px; padding-left: 6px; }
+.tw-cap b { color: var(--ink); }

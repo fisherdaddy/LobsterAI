@@ -227,7 +227,7 @@
     root.append(tag);
     const player = h('div', { class: 'abs', id: 'r4-player' });
     root.append(player);
-    const ttl = h('div', { class: 'pl-title' }, h('div', { class: 'a' }, '勾股定理：一个不用公式的证明'), h('div', { class: 'b' }, '3BLUE1BROWN 风格 · AI 旁白'));
+    const ttl = h('div', { class: 'pl-title' }, h('div', { class: 'a' }, '勾股定理：一个不用公式的证明'), h('div', { class: 'b', style: 'font-family:var(--mono);letter-spacing:0;font-size:18px' }, '“Create a 3b1b style video explainer on X. Use my ElevenLabs API key for audio narration”'));
     const progF = h('div', { class: 'f' });
     const timeTxt = h('span', {}, '0:00');
     const bar = h('div', { class: 'pl-bar' }, h('span', { html: '<svg width="22" height="22" viewBox="0 0 22 22"><path d="M5 3 L19 11 L5 19 Z" fill="#c9c2b6"/></svg>' }), timeTxt, h('div', { class: 'pl-prog' }, progF), h('span', {}, '1:24'));
